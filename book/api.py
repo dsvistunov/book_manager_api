@@ -7,7 +7,7 @@ from book.db import get_db
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
-@bp.route('/list', methods=('Get',))
+@bp.route('/books', methods=('Get',))
 def list_all():
     db = get_db()
     books = db.execute(
@@ -16,10 +16,10 @@ def list_all():
     return jsonify(books)
 
 
-@bp.route('/create', methods=('POST',))
+@bp.route('/books', methods=('POST',))
 def create():
     if request.json:
-        autor = request.json.get("autor", None)
+        autor = request.json.get("author", None)
         title = request.json.get("title", None)
         published = request.json.get("published", None)
         error = None
@@ -46,7 +46,7 @@ def create():
     return jsonify({"success": False})
 
 
-@bp.route('/get/<int:book_id>', methods=('GET',))
+@bp.route('/books/<int:book_id>', methods=('GET',))
 def get(book_id):
     db = get_db()
     book = db.execute(
@@ -56,7 +56,7 @@ def get(book_id):
     return jsonify(book)
 
 
-@bp.route('/update/<int:book_id>', methods=('PUT',))
+@bp.route('/books/<int:book_id>', methods=('PUT',))
 def update(book_id):
     if request.json:
         autor = request.json.get("autor", None)
@@ -84,7 +84,7 @@ def update(book_id):
     return jsonify({"updated": False})
 
 
-@bp.route('/delete/<int:book_id>', methods=('DELETE',))
+@bp.route('/books/<int:book_id>', methods=('DELETE',))
 def delete(book_id):
     if request.json:
         db = get_db()
