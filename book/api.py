@@ -1,30 +1,46 @@
+from datetime import datetime
 from flask import (
     Blueprint, request, jsonify
 )
 
-from book.db import get_db
+from book import Author, Book, db
+from .serializers import book_schema, books_schema
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
 @bp.route('/books', methods=('Get',))
 def list_all():
-    db = get_db()
-    books = db.execute(
-        'SELECT * FROM book'
-    ).fetchall()
-    return jsonify(books)
+    books = Book.query
+    if request.args:
+        for key in request.args:
+            if hasattr(Book, key):
+                books = books.join(getattr(Book, key), aliased=True)\
+                    .filter_by(first_name=request.args[key])
+            elif '__' in key:
+                field, option = key.split('__')
+                if option == 'startswith':
+                    books = books.filter(getattr(Book, field)
+                                         .startswith(request.args[key]))
+                elif option == 'endswith':
+                    books = books.filter(getattr(Book, field)
+                                         .endswith(request.args[key]))
+
+    serializer = books_schema.dump(books.all())
+    return jsonify(serializer.data)
 
 
 @bp.route('/books', methods=('POST',))
 def create():
     if request.json:
-        autor = request.json.get("author", None)
+        author_id = request.json.get("author", None)
+        author = Author.query.get(author_id)
         title = request.json.get("title", None)
-        published = request.json.get("published", None)
+        date_str = request.json.get("published", None)
+        published = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
         error = None
 
-        if autor is None:
+        if author is None:
             error = "Autor is required"
         elif title is None:
             error = "Title is required"
@@ -34,13 +50,9 @@ def create():
         if error is not None:
             return jsonify(error)
         else:
-            db = get_db()
-            db.execute(
-                'INSERT INTO book (author_id, title, published)'
-                ' VALUES (?, ?, ?)',
-                (autor, title, published)
-            )
-            db.commit()
+            book = Book(author=author, title=title, published=published)
+            db.session.add(book)
+            db.session.commit()
             return jsonify({'success': True})
 
     return jsonify({"success": False})
@@ -48,23 +60,22 @@ def create():
 
 @bp.route('/books/<int:book_id>', methods=('GET',))
 def get(book_id):
-    db = get_db()
-    book = db.execute(
-        'SELECT * FROM book WHERE id = ?',
-        (book_id,)
-    ).fetchone()
-    return jsonify(book)
+    book = Book.query.get_or_404(book_id)
+    serializer = book_schema.dump(book)
+    return jsonify(serializer.data)
 
 
 @bp.route('/books/<int:book_id>', methods=('PUT',))
 def update(book_id):
     if request.json:
-        autor = request.json.get("autor", None)
+        author_id = request.json.get("author", None)
+        author = Author.query.get_or_404(author_id)
         title = request.json.get("title", None)
-        published = request.json.get("published", None)
+        date_str = request.json.get("published", None)
+        published = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
         error = None
 
-        if autor is None:
+        if author is None:
             error = "Autor is required"
         elif title is None:
             error = "Title is required"
@@ -74,12 +85,11 @@ def update(book_id):
         if error is not None:
             return jsonify(error)
         else:
-            db = get_db()
-            db.execute(
-                'UPDATE book SET author_id = ?, title = ?, published = ? WHERE id = ?',
-                (autor, title, published, book_id,)
-            )
-            db.commit()
+            book = Book.query.get_or_404(book_id)
+            book.author = author
+            book.title = title
+            book.published = published
+            db.session.commit()
             return jsonify({"updated": True})
     return jsonify({"updated": False})
 
@@ -87,53 +97,11 @@ def update(book_id):
 @bp.route('/books/<int:book_id>', methods=('DELETE',))
 def delete(book_id):
     if request.json:
-        db = get_db()
-        exist = db.execute(
-            'SELECT * FROM book WHERE id = ?',
-            (book_id,)
-        ).fetchone()
-        if exist:
-            db.execute(
-                'DELETE FROM book WHERE id = ?',
-                (book_id,)
-            )
-            db.commit()
+        book = Book.query.get_or_404(book_id)
+        if book:
+            db.session.delete(book)
+            db.session.commit()
             return jsonify({"deleted": True})
         else:
             message = "Book with id %s doesn't exist" % book_id
             return jsonify({"error": message})
-
-
-@bp.route('/filter', methods=('POST',))
-def filter():
-    if request.json:
-        field = request.json.get("field", None)
-        option = request.json.get("option", None)
-        value = request.json.get("value", None)
-        error = None
-
-        if field is None:
-            error = "Field is required"
-        elif option is None:
-            error = "Option is required"
-        elif value is None:
-            error = "Value is required"
-
-        if error is not None:
-            return jsonify({"error": error})
-        else:
-            db = get_db()
-
-            if option == 'startswith':
-                pattern = '"{}%"'.format(value)
-                sql_query = 'SELECT * FROM book WHERE {} LIKE {}'.format(field, pattern)
-                result = db.execute(sql_query).fetchall()
-            elif option == 'endswith':
-                pattern = '"%{}"'.format(value)
-                sql_query = 'SELECT * FROM book WHERE {} LIKE {}'.format(field, pattern)
-                result = db.execute(sql_query).fetchall()
-            elif option == 'exact':
-                sql_query = 'SELECT * FROM book WHERE {} = {}'.format(field, value)
-                result = db.execute(sql_query).fetchall()
-
-            return jsonify(result)

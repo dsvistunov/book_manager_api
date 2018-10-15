@@ -1,33 +1,39 @@
 import os
-
+import click
 from flask import Flask
+from flask.cli import with_appcontext
+from flask_sqlalchemy import SQLAlchemy
 
 
-def create_app(test_config=None):
-    app = Flask(__name__, instance_relative_config=True)
-    app.config.from_mapping(
-        SECRET_KEY='dev',
-        DATABASE=os.path.join(app.instance_path, 'books.db'),
-    )
+app = Flask(__name__)
+path_to = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'books.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + path_to
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-    if test_config is None:
-        app.config.from_pyfile('config.py', silent=True)
-    else:
-        app.config.from_mapping(test_config)
 
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
+@click.command('init-db')
+@with_appcontext
+def init_db_command():
+    db.create_all()
+    click.echo('Db init')
 
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
 
-    from . import db
-    db.init_app(app)
+app.cli.add_command(init_db_command)
 
-    from . import api
-    app.register_blueprint(api.bp)
 
-    return app
+class Author(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(80), nullable=False)
+    last_name = db.Column(db.String(120),  nullable=False)
+
+
+class Book(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('author.id'), nullable=False)
+    author = db.relationship('Author', backref=db.backref('books', lazy=True))
+    title = db.Column(db.String(120), nullable=False)
+    published = db.Column(db.Date, nullable=False)
+
+from . import api
+app.register_blueprint(api.bp)
