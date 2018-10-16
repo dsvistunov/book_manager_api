@@ -33,22 +33,23 @@ def list_all():
 @bp.route('/books', methods=('POST',))
 def create():
     if request.json:
-        author_id = request.json.get("author", None)
+        author_id = request.json.get("author", 0)
         author = Author.query.get(author_id)
         title = request.json.get("title", None)
         date_str = request.json.get("published", None)
-        published = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
         error = None
 
         if author is None:
             error = "Autor is required"
         elif title is None:
             error = "Title is required"
-        elif published is None:
+        elif date_str is None:
             error = "Published is required"
+        else:
+            published = datetime.strptime(date_str, '%Y-%m-%d')
 
         if error is not None:
-            return jsonify(error)
+            return jsonify({'error': error})
         else:
             book = Book(author=author, title=title, published=published)
             db.session.add(book)
@@ -72,7 +73,7 @@ def update(book_id):
         author = Author.query.get_or_404(author_id)
         title = request.json.get("title", None)
         date_str = request.json.get("published", None)
-        published = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        published = datetime.strptime(date_str, '%Y-%m-%d')
         error = None
 
         if author is None:
@@ -105,3 +106,4 @@ def delete(book_id):
         else:
             message = "Book with id %s doesn't exist" % book_id
             return jsonify({"error": message})
+    return jsonify({"deleted": False})
