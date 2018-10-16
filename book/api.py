@@ -3,7 +3,7 @@ from flask import (
     Blueprint, request, jsonify
 )
 
-from book import Author, Book, db
+from book.models import Author, Book, db
 from .serializers import book_schema, books_schema
 
 bp = Blueprint('api', __name__, url_prefix='/api')

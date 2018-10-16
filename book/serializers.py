@@ -1,8 +1,8 @@
 from flask_marshmallow import Marshmallow
-from book import app, Author, Book
+from book.models import Author, Book
 
 
-ma = Marshmallow(app)
+ma = Marshmallow()
 
 
 class AuthorSchema(ma.ModelSchema):
