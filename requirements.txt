@@ -8,6 +8,7 @@ itsdangerous==0.24
 Jinja2==2.10
 MarkupSafe==1.0
 marshmallow==2.16.0
+marshmallow-sqlalchemy==0.14.1
 more-itertools==4.3.0
 pluggy==0.7.1
 py==1.6.0
