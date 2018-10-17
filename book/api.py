@@ -11,23 +11,25 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 
 @bp.route('/books', methods=('Get',))
 def list_all():
-    books = Book.query
-    if request.args:
-        for key in request.args:
-            if hasattr(Book, key):
-                books = books.join(getattr(Book, key), aliased=True)\
-                    .filter_by(first_name=request.args[key])
-            elif '__' in key:
-                field, option = key.split('__')
-                if option == 'startswith':
-                    books = books.filter(getattr(Book, field)
-                                         .startswith(request.args[key]))
-                elif option == 'endswith':
-                    books = books.filter(getattr(Book, field)
-                                         .endswith(request.args[key]))
-
-    serializer = books_schema.dump(books.all())
-    return jsonify(serializer.data)
+    if request.json:
+        books = Book.query
+        if request.args:
+            for key in request.args:
+                if hasattr(Book, key):
+                    books = books.join(getattr(Book, key), aliased=True)\
+                        .filter_by(first_name=request.args[key])
+                elif '__' in key:
+                    field, option = key.split('__')
+                    if option == 'startswith':
+                        books = books.filter(getattr(Book, field)
+                                             .startswith(request.args[key]))
+                    elif option == 'endswith':
+                        books = books.filter(getattr(Book, field)
+                                             .endswith(request.args[key]))
+        serializer = books_schema.dump(books.all())
+        return jsonify(serializer.data)
+    else:
+        return jsonify({"error": "request is %s, must be application/json" % request.content_type})
 
 
 @bp.route('/books', methods=('POST',))
@@ -46,9 +48,12 @@ def create():
 
 @bp.route('/books/<int:book_id>', methods=('GET',))
 def get(book_id):
-    book = Book.query.get_or_404(book_id)
-    serializer = book_schema.dump(book)
-    return jsonify(serializer.data)
+    if request.json:
+        book = Book.query.get_or_404(book_id)
+        serializer = book_schema.dump(book)
+        return jsonify(serializer.data)
+    else:
+        return jsonify({"error": "request is %s, must be application/json" % request.content_type})
 
 
 @bp.route('/books/<int:book_id>', methods=('PUT',))
@@ -80,4 +85,5 @@ def delete(book_id):
         else:
             message = "Book with id %s doesn't exist" % book_id
             return jsonify({"error": message})
-    return jsonify({"deleted": False})
+    else:
+        return jsonify({"error": "request is %s, must be application/json" % request.content_type})
