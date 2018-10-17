@@ -20,9 +20,8 @@ class Book(db.Model):
     published = db.Column(db.Date, nullable=False)
 
     def save(self):
-        if self.id is None:
-            db.session.add(self)
-            db.session.commit()
+        db.session.add(self)
+        db.session.commit()
         return self
 
 

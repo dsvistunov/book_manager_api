@@ -40,8 +40,8 @@ def create():
             book = book.data.save()
             serialized = book_schema.dump(book)
             return jsonify(serialized.data)
-
-    return jsonify({"success": False})
+    else:
+        return jsonify({"error": "request is %s, must be application/json" % request.content_type})
 
 
 @bp.route('/books/<int:book_id>', methods=('GET',))
@@ -54,30 +54,19 @@ def get(book_id):
 @bp.route('/books/<int:book_id>', methods=('PUT',))
 def update(book_id):
     if request.json:
-        author_id = request.json.get("author", None)
-        author = Author.query.get_or_404(author_id)
-        title = request.json.get("title", None)
-        date_str = request.json.get("published", None)
-        published = datetime.strptime(date_str, '%Y-%m-%d')
-        error = None
-
-        if author is None:
-            error = "Autor is required"
-        elif title is None:
-            error = "Title is required"
-        elif published is None:
-            error = "Published is required"
-
-        if error is not None:
-            return jsonify(error)
+        exit_book = Book.query.get(book_id)
+        if exit_book:
+            book = book_schema.load(request.json, instance=exit_book)
+            if book.errors:
+                return jsonify(book.errors), 400
+            else:
+                book = book.data.save()
+                serialized = book_schema.dump(book)
+                return jsonify(serialized.data)
         else:
-            book = Book.query.get_or_404(book_id)
-            book.author = author
-            book.title = title
-            book.published = published
-            db.session.commit()
-            return jsonify({"updated": True})
-    return jsonify({"updated": False})
+            return jsonify({"error": "Book with id %s doesn't exist" % book_id})
+    else:
+        return jsonify({"error": "request is %s, must be application/json" % request.content_type})
 
 
 @bp.route('/books/<int:book_id>', methods=('DELETE',))
