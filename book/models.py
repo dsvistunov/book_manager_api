@@ -19,6 +19,12 @@ class Book(db.Model):
     title = db.Column(db.String(120), nullable=False)
     published = db.Column(db.Date, nullable=False)
 
+    def save(self):
+        if self.id is None:
+            db.session.add(self)
+            db.session.commit()
+        return self
+
 
 @click.command('init-db')
 @with_appcontext

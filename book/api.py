@@ -4,7 +4,7 @@ from flask import (
 )
 
 from book.models import Author, Book, db
-from .serializers import book_schema, books_schema, ValidationError
+from .schema import book_schema, books_schema
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -33,34 +33,13 @@ def list_all():
 @bp.route('/books', methods=('POST',))
 def create():
     if request.json:
-        try:
-            book_schema.load(request.json)
-            book_schema.save()
-        except ValidationError as error:
-            print(error.messages['_schema'])
-
-        # author_id = request.json.get("author", 0)
-        # author = Author.query.get(author_id)
-        # title = request.json.get("title", None)
-        # date_str = request.json.get("published", None)
-        # error = None
-        #
-        # if author is None:
-        #     error = "Autor is required"
-        # elif title is None:
-        #     error = "Title is required"
-        # elif date_str is None:
-        #     error = "Published is required"
-        # else:
-        #     published = datetime.strptime(date_str, '%Y-%m-%d')
-        #
-        # if error is not None:
-        #     return jsonify({'error': error})
-        # else:
-        #     book = Book(author=author, title=title, published=published)
-        #     db.session.add(book)
-        #     db.session.commit()
-        #     return jsonify({'success': True})
+        book = book_schema.load(request.json)
+        if book.errors:
+            return jsonify(book.errors), 400
+        else:
+            book = book.data.save()
+            serialized = book_schema.dump(book)
+            return jsonify(serialized.data)
 
     return jsonify({"success": False})
 

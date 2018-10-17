@@ -20,7 +20,7 @@ def create_app(config=None):
     db.init_app(app)
     app.cli.add_command(init_db_command)
 
-    from book.serializers import ma
+    from book.schema import ma
     ma.init_app(app)
 
     from . import api
