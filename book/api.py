@@ -11,7 +11,7 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 
 @bp.route('/books', methods=('Get',))
 def list_all():
-    if request.json:
+    if request.is_json:
         books = Book.query
         if request.args:
             for key in request.args:
