@@ -48,7 +48,7 @@ def create():
 
 @bp.route('/books/<int:book_id>', methods=('GET',))
 def get(book_id):
-    if request.json:
+    if request.is_json:
         book = Book.query.get_or_404(book_id)
         serializer = book_schema.dump(book)
         return jsonify(serializer.data)
@@ -58,7 +58,7 @@ def get(book_id):
 
 @bp.route('/books/<int:book_id>', methods=('PUT',))
 def update(book_id):
-    if request.json:
+    if request.is_json:
         exit_book = Book.query.get(book_id)
         if exit_book:
             book = book_schema.load(request.json, instance=exit_book)
