@@ -34,7 +34,7 @@ def list_all():
 
 @bp.route('/books', methods=('POST',))
 def create():
-    if request.json:
+    if request.is_json:
         book = book_schema.load(request.json)
         if book.errors:
             return jsonify(book.errors), 400
@@ -76,7 +76,7 @@ def update(book_id):
 
 @bp.route('/books/<int:book_id>', methods=('DELETE',))
 def delete(book_id):
-    if request.json:
+    if request.is_json:
         book = Book.query.get_or_404(book_id)
         if book:
             db.session.delete(book)
