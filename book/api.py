@@ -9,23 +9,30 @@ from .schema import book_schema, books_schema
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+def _filter(instanse, args):
+    query = instanse.query
+    for key in args:
+        if hasattr(instanse, key):
+            query = query.join(getattr(instanse, key), aliased=True) \
+                .filter_by(first_name=request.args[key])
+        elif '__' in key:
+            field, option = key.split('__')
+            if option == 'startswith':
+                query = query.filter(getattr(instanse, field)
+                                     .startswith(args[key]))
+            elif option == 'endswith':
+                query = query.filter(getattr(instanse, field)
+                                     .endswith(args[key]))
+    return query
+
+
 @bp.route('/books', methods=('Get',))
 def list_all():
     if request.is_json:
-        books = Book.query
         if request.args:
-            for key in request.args:
-                if hasattr(Book, key):
-                    books = books.join(getattr(Book, key), aliased=True)\
-                        .filter_by(first_name=request.args[key])
-                elif '__' in key:
-                    field, option = key.split('__')
-                    if option == 'startswith':
-                        books = books.filter(getattr(Book, field)
-                                             .startswith(request.args[key]))
-                    elif option == 'endswith':
-                        books = books.filter(getattr(Book, field)
-                                             .endswith(request.args[key]))
+            books = _filter(Book, request.args)
+        else:
+            books = Book.query
         serializer = books_schema.dump(books.all())
         return jsonify(serializer.data)
     else:
