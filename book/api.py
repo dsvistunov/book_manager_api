@@ -13,8 +13,11 @@ def _filter(instanse, args):
     query = instanse.query
     for key in args:
         if hasattr(instanse, key):
-            query = query.join(getattr(instanse, key), aliased=True) \
-                .filter_by(first_name=request.args[key])
+            if key == 'author':
+                query = query.join(getattr(instanse, key), aliased=True) \
+                    .filter_by(first_name=request.args[key])
+            else:
+                query = query.filter(getattr(instanse, key) == args[key])
         elif '__' in key:
             field, option = key.split('__')
             if option == 'startswith':
